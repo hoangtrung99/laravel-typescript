@@ -18,6 +18,11 @@ class TypeScriptType
         return "Array<{$type}>";
     }
 
+    public static function omit(string $type = self::ANY, string $key): string
+    {
+        return "Omit<{$type}, {$key}>";
+    }
+
     public static function fromMethod(ReflectionMethod $method): array
     {
         $types = $method->getReturnType() instanceof ReflectionUnionType

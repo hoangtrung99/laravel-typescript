@@ -187,13 +187,16 @@ class ModelGenerator extends AbstractGenerator
     {
         $relationReturn = $method->invoke($this->model);
         $related = str_replace('\\', '.', get_class($relationReturn->getRelated()));
+        $relationModel = $relationReturn->getRelated();
+        $relationMethods = $this->getRelationMethodsWithModel($relationModel);
+        $omitMethod = $this->getOmitMethodRelation($relationMethods, $relationModel);
 
         if ($this->isManyRelation($method)) {
-            return TypeScriptType::array($related);
+            return TypeScriptType::array($omitMethod ? TypeScriptType::omit($related, "'" . $omitMethod->getName() . "'") : $related);
         }
 
         if ($this->isOneRelattion($method)) {
-            return $related;
+            return $omitMethod ? TypeScriptType::omit($related, "'" . $omitMethod->getName() . "'") : $related;
         }
 
         return TypeScriptType::ANY;
@@ -228,5 +231,39 @@ class ModelGenerator extends AbstractGenerator
                 HasOneThrough::class,
             ]
         );
+    }
+
+    protected function getRelationMethodsWithModel(Model $model): Collection
+    {
+        $reflector = new ReflectionClass($model::class);
+        $methods = collect($reflector->getMethods(ReflectionMethod::IS_PUBLIC))
+            ->reject(fn (ReflectionMethod $method) => $method->isStatic())
+            ->reject(fn (ReflectionMethod $method) => $method->getNumberOfParameters());
+        $relationMethods = $methods->filter(function (ReflectionMethod $method) use ($model) {
+            try {
+                return $method->invoke($model) instanceof Relation;
+            } catch (Throwable) {
+                return false;
+            }
+        })
+            ->filter(function (ReflectionMethod $method) use ($reflector) {
+                return collect($reflector->getTraits())
+                    ->filter(function (ReflectionClass $trait) use ($method) {
+                        return $trait->hasMethod($method->name);
+                    })
+                    ->isEmpty();
+            });
+
+        return  $relationMethods;
+    }
+
+    protected function getOmitMethodRelation(Collection $relationMethods, Model $relationModel): ReflectionMethod | null
+    {
+        $omitMethod = $relationMethods->first(function (ReflectionMethod $method) use ($relationModel) {
+            $relationReturn = $method->invoke($relationModel)->getRelated();
+            return $relationReturn->getTable() == $this->model->getTable();
+        });
+
+        return $omitMethod;
     }
 }
