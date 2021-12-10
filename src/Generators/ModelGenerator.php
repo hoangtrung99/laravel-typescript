@@ -34,7 +34,6 @@ class ModelGenerator extends AbstractGenerator
         return collect([
             $this->getProperties(),
             $this->getRelations(),
-            $this->getManyRelations(),
             $this->getAccessors(),
         ])
             ->filter(fn (string $part) => !empty($part))
