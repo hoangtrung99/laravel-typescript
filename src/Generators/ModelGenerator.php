@@ -191,11 +191,11 @@ class ModelGenerator extends AbstractGenerator
         $omitMethod = $this->getOmitMethodRelation($relationMethods, $relationModel);
 
         if ($this->isManyRelation($method)) {
-            return TypeScriptType::array($omitMethod ? TypeScriptType::omit($related, "'" . $omitMethod->getName() . "'") : $related);
+            return TypeScriptType::array($omitMethod ? TypeScriptType::omit($related, "'" . Str::snake($omitMethod->getName()) . "'") : $related);
         }
 
         if ($this->isOneRelattion($method)) {
-            return $omitMethod ? TypeScriptType::omit($related, "'" . $omitMethod->getName() . "'") : $related;
+            return $omitMethod ? TypeScriptType::omit($related, "'" . Str::snake($omitMethod->getName()) . "'") : $related;
         }
 
         return TypeScriptType::ANY;
